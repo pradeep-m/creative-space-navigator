@@ -1,0 +1,10 @@
+[project]
+name = "creative-space-navigator"
+version = "0.1.0"
+description = "Explore a space of ad concepts via thematic grouping and semantic 2x2 maps"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "anthropic>=0.40",
+]

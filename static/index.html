@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creative Space Navigator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="titles">
+      <h1>Creative Space Navigator</h1>
+      <p class="sub">Explore a space of ad concepts without reading dozens of near-duplicates.</p>
+    </div>
+    <form id="brief">
+      <label>
+        Product
+        <input id="product" required placeholder="e.g. a reusable insulated water bottle">
+      </label>
+      <label>
+        Target audience
+        <input id="audience" required placeholder="e.g. commuting office workers in their 30s">
+      </label>
+      <button type="submit" id="go">Explore</button>
+    </form>
+    <p id="status" class="status" hidden></p>
+  </div>
+</header>
+
+<main>
+  <section class="pane" id="pane-v1">
+    <div class="pane-head">
+      <h2>Version 1 <span class="tag">simple</span></h2>
+      <p>One flat set of concepts, grouped into a handful of creative themes. Compare directions instead of individual lines of copy.</p>
+    </div>
+    <div id="themes" class="pane-body">
+      <p class="empty">Enter a brief above to begin.</p>
+    </div>
+  </section>
+
+  <section class="pane" id="pane-v2">
+    <div class="pane-head">
+      <h2>Version 2 <span class="tag">structured</span></h2>
+      <p>The same concepts projected onto orthogonal creative dimensions. Pick one quadrant per map to compose a combined direction.</p>
+    </div>
+    <div id="maps" class="pane-body">
+      <p class="empty">Enter a brief above to begin.</p>
+    </div>
+    <div id="intersection" class="results" hidden></div>
+  </section>
+</main>
+
+<div id="selbar" class="selbar" hidden>
+  <div class="selbar-inner">
+    <div class="sel-text">
+      <span class="sel-caption">Combined direction</span>
+      <strong id="sel-label"></strong>
+    </div>
+    <div class="selbar-actions">
+      <button id="clear-sel" class="ghost">Clear</button>
+      <button id="gen-intersection">Generate concepts here</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

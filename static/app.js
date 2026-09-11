@@ -45,6 +45,21 @@ async function api(path, body) {
   return data;
 }
 
+const VISIBLE = 3;  // how many examples a card or quadrant shows before collapsing
+
+function overflowToggle(hiddenNodes, label) {
+  const btn = el('button', 'more-toggle', label(hiddenNodes.length));
+  btn.type = 'button';
+  btn.onclick = (event) => {
+    // Quadrants are themselves clickable, so don't let this bubble into a selection.
+    event.stopPropagation();
+    const opening = hiddenNodes[0].hidden;
+    hiddenNodes.forEach((node) => { node.hidden = !opening; });
+    btn.textContent = opening ? 'Show fewer' : label(hiddenNodes.length);
+  };
+  return btn;
+}
+
 function ideaCard(idea, cls) {
   const wrap = el('div', cls || 'idea');
   wrap.appendChild(el('div', 'hl', idea.headline));
@@ -67,14 +82,18 @@ function renderThemes() {
     card.appendChild(top);
     card.appendChild(el('p', 'desc', theme.description));
 
-    theme.idea_ids
-      .map((id) => state.ideasById[id])
-      .filter(Boolean)
-      .slice(0, 3)
-      .forEach((idea) => card.appendChild(ideaCard(idea)));
+    const themeIdeas = theme.idea_ids.map((id) => state.ideasById[id]).filter(Boolean);
+    const nodes = themeIdeas.map((idea, i) => {
+      const node = ideaCard(idea);
+      if (i >= VISIBLE) node.hidden = true;
+      card.appendChild(node);
+      return node;
+    });
 
-    if (theme.idea_ids.length > 3) {
-      card.appendChild(el('div', 'cell-more', `+ ${theme.idea_ids.length - 3} more in this theme`));
+    if (themeIdeas.length > VISIBLE) {
+      card.appendChild(
+        overflowToggle(nodes.slice(VISIBLE), (n) => `+ ${n} more in this theme`)
+      );
     }
 
     const wrap = el('div', 'more-wrap');
@@ -153,8 +172,9 @@ function buildCell(m, xSide, ySide) {
   const sel = state.selections[m.id];
   const isSelected = sel && sel.x_side === xSide && sel.y_side === ySide;
 
-  const cell = el('button', 'cell');
-  cell.type = 'button';
+  // A div rather than a button, because the overflow toggle nests inside it and
+  // interactive content cannot live inside a <button>.
+  const cell = el('div', 'cell');
   cell.dataset.mapId = m.id;
   cell.dataset.xSide = xSide;
   cell.dataset.ySide = ySide;
@@ -172,17 +192,33 @@ function buildCell(m, xSide, ySide) {
   } else if (ideas.length === 0) {
     list.appendChild(el('div', 'cell-item', 'No concepts landed here.'));
   } else {
-    ideas.slice(0, 3).forEach((idea) => list.appendChild(el('div', 'cell-item', idea.headline)));
-    if (ideas.length > 3) list.appendChild(el('div', 'cell-more', `+ ${ideas.length - 3} more`));
+    const nodes = ideas.map((idea, i) => {
+      const node = el('div', 'cell-item', idea.headline);
+      if (i >= VISIBLE) node.hidden = true;
+      list.appendChild(node);
+      return node;
+    });
+    if (ideas.length > VISIBLE) {
+      list.appendChild(overflowToggle(nodes.slice(VISIBLE), (n) => `+ ${n} more`));
+    }
   }
   cell.appendChild(list);
 
   if (isSelected) cell.classList.add('selected');
   if (ideas === null) {
     cell.classList.add('dead');
-    cell.disabled = true;
   } else {
-    cell.onclick = () => toggleQuadrant(m.id, xSide, ySide);
+    const toggle = () => toggleQuadrant(m.id, xSide, ySide);
+    cell.setAttribute('role', 'button');
+    cell.tabIndex = 0;
+    cell.setAttribute('aria-pressed', String(Boolean(isSelected)));
+    cell.onclick = toggle;
+    cell.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggle();
+      }
+    };
   }
   return cell;
 }
@@ -203,6 +239,7 @@ function refreshSelectionStyles() {
     const sel = state.selections[cell.dataset.mapId];
     const on = sel && sel.x_side === cell.dataset.xSide && sel.y_side === cell.dataset.ySide;
     cell.classList.toggle('selected', Boolean(on));
+    if (cell.hasAttribute('role')) cell.setAttribute('aria-pressed', String(Boolean(on)));
   });
 }
 

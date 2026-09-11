@@ -271,10 +271,16 @@ main {
   min-height: 112px;
   text-align: left;
   color: var(--text);
+  cursor: pointer;
   transition: border-color .12s, background .12s;
   display: flex;
   flex-direction: column;
   gap: 7px;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .cell:hover:not(.dead) { border-color: var(--muted); }
@@ -299,7 +305,31 @@ main {
 .cell-list { display: flex; flex-direction: column; gap: 5px; }
 .cell-item { font-size: 12px; line-height: 1.35; color: var(--muted); }
 .cell.selected .cell-item { color: var(--text); }
-.cell-more { font-size: 10.5px; color: #6f7788; }
+
+.more-toggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font: inherit;
+  font-size: 10.5px;
+  color: #6f7788;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.more-toggle:hover { color: var(--accent); }
+
+.more-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.theme > .more-toggle {
+  font-size: 11.5px;
+  margin-bottom: 6px;
+}
 
 /* ---------- results ---------- */
 

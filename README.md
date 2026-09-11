@@ -47,6 +47,26 @@ To record a new fixture, do a live run of the brief you want, then:
 uv run python record_fixtures.py
 ```
 
+## Deploying
+
+The app is stateless: the browser holds the run and posts the relevant slices back with
+each request, so it runs on serverless without a database.
+
+```bash
+npx vercel deploy --prod
+```
+
+Set two environment variables on the deployment:
+
+| Variable | Purpose |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | required |
+| `APP_PASSWORD` | shared password for basic auth; the gate is skipped entirely when unset |
+
+`vercel.json` routes every path to `api/index.py` and allows 60s per invocation, which
+covers the ~26s corpus call. On Vercel the disk cache moves to `/tmp` and is best-effort
+only, since each instance gets its own, so expect cold runs to cost full latency.
+
 ## How it works
 
 ```
@@ -71,7 +91,8 @@ quadrant follows from the sign. There are no embeddings involved.
 
 | File | Role |
 | --- | --- |
-| `app.py` | FastAPI routes, in-memory run store, parallel orchestration |
+| `app.py` | FastAPI routes, password gate, request validation, parallel orchestration |
+| `api/index.py`, `vercel.json` | Serverless entrypoint and routing |
 | `llm.py` | Anthropic wrapper, forced tool-use for structured output, disk cache, mock replay |
 | `prompts.py` | The six prompts and their tool schemas |
 | `static/` | Single page, vanilla JS, no build step |
@@ -79,6 +100,7 @@ quadrant follows from the sign. There are no embeddings involved.
 
 ## Known limits
 
-Runs live in memory and are lost when the server restarts (so avoid `--reload` while
-using it). Single user, no auth, no export. Quadrant balance depends on the model, and a
-genuinely rare combination will legitimately show few or no concepts.
+Runs live in the browser tab and are lost on refresh. No export. Access control is a
+single shared password, which is enough to stop a public URL burning the API key but is
+not real multi-user auth. Quadrant balance depends on the model, and a genuinely rare
+combination will legitimately show few or no concepts.

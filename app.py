@@ -1,16 +1,23 @@
-"""Creative Space Navigator - local FastAPI app."""
+"""Creative Space Navigator - FastAPI app.
+
+Stateless by design: the browser holds the run and passes the pieces it needs back with
+each request. That costs a few KB per call and buys deployability onto serverless, where
+an in-memory run store would break the moment two requests hit different instances.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import uuid
+import base64
+import os
+import secrets
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import llm
 import prompts
@@ -18,18 +25,106 @@ import prompts
 ROOT = Path(__file__).parent
 STATIC = ROOT / "static"
 
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+
 app = FastAPI(title="Creative Space Navigator")
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
-# Single-user prototype: runs live in memory and vanish on restart.
-RUNS: dict[str, dict[str, Any]] = {}
+
+@app.middleware("http")
+async def password_gate(request: Request, call_next):
+    """Shared-password basic auth, so a public demo URL can't burn the API key.
+
+    Disabled entirely when APP_PASSWORD is unset, which is the local dev case.
+    """
+    if not APP_PASSWORD:
+        return await call_next(request)
+
+    header = request.headers.get("authorization", "")
+    if header.startswith("Basic "):
+        try:
+            decoded = base64.b64decode(header[6:]).decode()
+        except (ValueError, UnicodeDecodeError):
+            decoded = ""
+        _, _, supplied = decoded.partition(":")
+        if secrets.compare_digest(supplied, APP_PASSWORD):
+            return await call_next(request)
+
+    return Response(
+        status_code=401,
+        content="Authentication required.",
+        headers={"WWW-Authenticate": 'Basic realm="Creative Space Navigator"'},
+    )
 
 
-def get_run(run_id: str) -> dict[str, Any]:
-    run = RUNS.get(run_id)
-    if run is None:
-        raise HTTPException(404, "Unknown run_id. Start a new exploration.")
-    return run
+# ---------------------------------------------------------------- payload models
+
+MAX_IDEAS = 60
+
+
+class Axis(BaseModel):
+    name: str = Field(max_length=120)
+    low_label: str = Field(max_length=60)
+    high_label: str = Field(max_length=60)
+
+
+class Map(BaseModel):
+    id: str = Field(max_length=16)
+    title: str = Field(max_length=120)
+    x_axis: Axis
+    y_axis: Axis
+    rationale: str = Field(default="", max_length=2000)
+
+
+class Idea(BaseModel):
+    id: str = Field(max_length=16)
+    headline: str = Field(max_length=300)
+    body: str = Field(default="", max_length=1000)
+    angle: str = Field(default="", max_length=300)
+
+
+class Theme(BaseModel):
+    id: str = Field(max_length=16)
+    name: str = Field(max_length=200)
+    description: str = Field(default="", max_length=1000)
+    idea_ids: list[str] = Field(default_factory=list, max_length=MAX_IDEAS)
+
+
+class Brief(BaseModel):
+    product: str = Field(min_length=1, max_length=300)
+    audience: str = Field(min_length=1, max_length=300)
+
+
+class CorpusIn(Brief):
+    maps: list[Map] = Field(max_length=6)
+
+
+class ThemesIn(Brief):
+    ideas: list[Idea] = Field(max_length=MAX_IDEAS)
+
+
+class MapsIn(Brief):
+    ideas: list[Idea] = Field(max_length=MAX_IDEAS)
+    maps: list[Map] = Field(max_length=6)
+
+
+class RefineThemeIn(Brief):
+    theme: Theme
+    examples: list[Idea] = Field(default_factory=list, max_length=MAX_IDEAS)
+
+
+class Selection(BaseModel):
+    map_id: str = Field(max_length=16)
+    x_side: str = Field(pattern="^(low|high)$")
+    y_side: str = Field(pattern="^(low|high)$")
+
+
+class IntersectionIn(Brief):
+    maps: list[Map] = Field(max_length=6)
+    selections: list[Selection] = Field(min_length=1, max_length=6)
+
+
+# ---------------------------------------------------------------- helpers
 
 
 def clamp(value: Any) -> float:
@@ -51,29 +146,7 @@ async def guard(coro):
         raise HTTPException(502, f"{type(exc).__name__}: {exc}") from exc
 
 
-class BriefIn(BaseModel):
-    product: str
-    audience: str
-
-
-class RunIn(BaseModel):
-    run_id: str
-
-
-class ThemeIn(BaseModel):
-    run_id: str
-    theme_id: str
-
-
-class Selection(BaseModel):
-    map_id: str
-    x_side: str  # "low" or "high"
-    y_side: str
-
-
-class IntersectionIn(BaseModel):
-    run_id: str
-    selections: list[Selection]
+# ---------------------------------------------------------------- routes
 
 
 @app.get("/")
@@ -87,79 +160,65 @@ async def config():
 
 
 @app.post("/api/dimensions")
-async def dimensions(body: BriefIn):
+async def dimensions(body: Brief):
     result = await guard(prompts.propose_dimensions(body.product, body.audience))
-
-    maps = []
-    for i, m in enumerate(result["maps"]):
-        maps.append({**m, "id": f"m{i}"})
-
-    run_id = uuid.uuid4().hex[:12]
-    RUNS[run_id] = {
-        "product": body.product,
-        "audience": body.audience,
-        "maps": maps,
-        "ideas": [],
-        "themes": [],
-    }
-    return {"run_id": run_id, "maps": maps}
+    maps = [{**m, "id": f"m{i}"} for i, m in enumerate(result["maps"])]
+    return {"maps": maps}
 
 
 @app.post("/api/corpus")
-async def corpus(body: RunIn):
-    run = get_run(body.run_id)
-    result = await guard(
-        prompts.generate_corpus(run["product"], run["audience"], run["maps"])
-    )
+async def corpus(body: CorpusIn):
+    maps = [m.model_dump() for m in body.maps]
+    result = await guard(prompts.generate_corpus(body.product, body.audience, maps))
 
-    # Ids are assigned here rather than by the model so they are guaranteed unique
-    # and stable for every downstream placement call.
+    # Ids are assigned here rather than by the model so they are unique and stable
+    # for every downstream placement call.
     ideas = [
         {"id": f"i{i + 1}", **{k: idea.get(k, "") for k in ("headline", "body", "angle")}}
-        for i, idea in enumerate(result["ideas"])
+        for i, idea in enumerate(result["ideas"][:MAX_IDEAS])
     ]
-    run["ideas"] = ideas
     return {"ideas": ideas}
 
 
 @app.post("/api/themes")
-async def themes(body: RunIn):
-    run = get_run(body.run_id)
-    if not run["ideas"]:
-        raise HTTPException(400, "Generate the concept corpus first.")
+async def themes(body: ThemesIn):
+    ideas = [i.model_dump() for i in body.ideas]
+    if not ideas:
+        raise HTTPException(400, "No concepts supplied.")
 
-    result = await guard(
-        prompts.cluster_themes(run["product"], run["audience"], run["ideas"])
-    )
+    result = await guard(prompts.cluster_themes(body.product, body.audience, ideas))
 
-    valid_ids = {idea["id"] for idea in run["ideas"]}
-    grouped = []
-    for i, theme in enumerate(result["themes"]):
-        idea_ids = [pid for pid in theme.get("idea_ids", []) if pid in valid_ids]
-        grouped.append({**theme, "id": f"t{i}", "idea_ids": idea_ids})
-
-    run["themes"] = grouped
+    valid_ids = {i["id"] for i in ideas}
+    grouped = [
+        {
+            **theme,
+            "id": f"t{n}",
+            "idea_ids": [pid for pid in theme.get("idea_ids", []) if pid in valid_ids],
+        }
+        for n, theme in enumerate(result["themes"])
+    ]
     return {"themes": grouped}
 
 
 @app.post("/api/maps")
-async def maps(body: RunIn):
-    run = get_run(body.run_id)
-    if not run["ideas"]:
-        raise HTTPException(400, "Generate the concept corpus first.")
+async def maps(body: MapsIn):
+    ideas = [i.model_dump() for i in body.ideas]
+    map_dicts = [m.model_dump() for m in body.maps]
+    if not ideas:
+        raise HTTPException(400, "No concepts supplied.")
 
     results = await guard(
         asyncio.gather(
             *(
-                prompts.place_on_map(run["product"], run["audience"], run["ideas"], m)
-                for m in run["maps"]
+                prompts.place_on_map(body.product, body.audience, ideas, m)
+                for m in map_dicts
             )
         )
     )
 
-    valid_ids = {idea["id"] for idea in run["ideas"]}
+    valid_ids = {i["id"] for i in ideas}
     placed = []
-    for m, result in zip(run["maps"], results):
+    for m, result in zip(map_dicts, results):
         seen: set[str] = set()
         points = []
         for p in result["placements"]:
@@ -170,51 +229,42 @@ async def maps(body: RunIn):
             points.append({"idea_id": pid, "x": clamp(p.get("x")), "y": clamp(p.get("y"))})
         placed.append({"map_id": m["id"], "placements": points})
 
-    run["placements"] = placed
     return {"maps": placed}
 
 
 @app.post("/api/refine/theme")
-async def refine_theme(body: ThemeIn):
-    run = get_run(body.run_id)
-    theme = next((t for t in run["themes"] if t["id"] == body.theme_id), None)
-    if theme is None:
-        raise HTTPException(404, "Unknown theme_id.")
-
-    by_id = {idea["id"]: idea for idea in run["ideas"]}
-    examples = [by_id[pid] for pid in theme["idea_ids"] if pid in by_id]
-
+async def refine_theme(body: RefineThemeIn):
     result = await guard(
-        prompts.refine_theme(run["product"], run["audience"], theme, examples)
+        prompts.refine_theme(
+            body.product,
+            body.audience,
+            body.theme.model_dump(),
+            [i.model_dump() for i in body.examples],
+        )
     )
     return {"ideas": result["ideas"]}
 
 
 @app.post("/api/refine/intersection")
 async def refine_intersection(body: IntersectionIn):
-    run = get_run(body.run_id)
-    if not body.selections:
-        raise HTTPException(400, "Select at least one quadrant.")
-
-    maps_by_id = {m["id"]: m for m in run["maps"]}
+    maps_by_id = {m.id: m for m in body.maps}
     constraints, label_parts = [], []
 
     for sel in body.selections:
         m = maps_by_id.get(sel.map_id)
         if m is None:
             raise HTTPException(404, f"Unknown map_id {sel.map_id}.")
-        for axis_key, side in (("x_axis", sel.x_side), ("y_axis", sel.y_side)):
-            axis = m[axis_key]
-            chosen = axis["high_label"] if side == "high" else axis["low_label"]
-            other = axis["low_label"] if side == "high" else axis["high_label"]
+        for axis, side in ((m.x_axis, sel.x_side), (m.y_axis, sel.y_side)):
+            chosen = axis.high_label if side == "high" else axis.low_label
+            other = axis.low_label if side == "high" else axis.high_label
             constraints.append(
-                f"On the '{axis['name']}' tension, the concept must be clearly "
+                f"On the '{axis.name}' tension, the concept must be clearly "
                 f"{chosen}, not {other}."
             )
             label_parts.append(chosen)
 
     result = await guard(
-        prompts.refine_intersection(run["product"], run["audience"], constraints)
+        prompts.refine_intersection(body.product, body.audience, constraints)
     )
     return {
         "ideas": result["ideas"],

@@ -1,5 +1,8 @@
+// The server is stateless, so this object is the single source of truth for a run and
+// the relevant slices get posted back with every request.
 const state = {
-  runId: null,
+  product: '',
+  audience: '',
   ideas: [],
   ideasById: {},
   themes: [],
@@ -7,6 +10,8 @@ const state = {
   placements: {},   // map_id -> [{idea_id, x, y}]
   selections: {},   // map_id -> {x_side, y_side}
 };
+
+const brief = () => ({ product: state.product, audience: state.audience });
 
 const $ = (id) => document.getElementById(id);
 const themesEl = $('themes');
@@ -86,7 +91,11 @@ async function expandTheme(theme, card, btn) {
   btn.disabled = true;
   btn.textContent = 'Generating…';
   try {
-    const data = await api('/api/refine/theme', { run_id: state.runId, theme_id: theme.id });
+    const data = await api('/api/refine/theme', {
+      ...brief(),
+      theme,
+      examples: theme.idea_ids.map((id) => state.ideasById[id]).filter(Boolean),
+    });
     const block = el('div', 'new-block');
     block.appendChild(el('div', 'label', `New concepts in "${theme.name}"`));
     data.ideas.forEach((idea) => block.appendChild(ideaCard(idea)));
@@ -236,7 +245,8 @@ async function generateIntersection() {
 
   try {
     const data = await api('/api/refine/intersection', {
-      run_id: state.runId,
+      ...brief(),
+      maps: state.maps,
       selections,
     });
     panel.replaceChildren();
@@ -259,7 +269,7 @@ async function explore(product, audience) {
   const go = $('go');
   go.disabled = true;
   Object.assign(state, {
-    runId: null, ideas: [], ideasById: {}, themes: [], maps: [],
+    product, audience, ideas: [], ideasById: {}, themes: [], maps: [],
     placements: {}, selections: {},
   });
   themesEl.replaceChildren(el('p', 'empty', 'Waiting for concepts…'));
@@ -269,23 +279,22 @@ async function explore(product, audience) {
 
   try {
     setStatus('Proposing mostly-orthogonal creative dimensions…', { busy: true });
-    const dims = await api('/api/dimensions', { product, audience });
-    state.runId = dims.run_id;
+    const dims = await api('/api/dimensions', brief());
     state.maps = dims.maps;
     renderMaps();  // axes now visible; cells fill in once placement lands
 
     setStatus('Generating a diverse concept corpus that spans those dimensions…', { busy: true });
-    const corpus = await api('/api/corpus', { run_id: state.runId });
+    const corpus = await api('/api/corpus', { ...brief(), maps: state.maps });
     state.ideas = corpus.ideas;
     state.ideasById = Object.fromEntries(corpus.ideas.map((i) => [i.id, i]));
 
     setStatus('Grouping into themes and projecting onto the maps…', { busy: true });
     const [themesRes, mapsRes] = await Promise.allSettled([
-      api('/api/themes', { run_id: state.runId }).then((d) => {
+      api('/api/themes', { ...brief(), ideas: state.ideas }).then((d) => {
         state.themes = d.themes;
         renderThemes();
       }),
-      api('/api/maps', { run_id: state.runId }).then((d) => {
+      api('/api/maps', { ...brief(), ideas: state.ideas, maps: state.maps }).then((d) => {
         d.maps.forEach((m) => { state.placements[m.map_id] = m.placements; });
         renderMaps();
       }),

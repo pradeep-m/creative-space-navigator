@@ -11,8 +11,18 @@ from typing import Any
 from anthropic import AsyncAnthropic
 
 ROOT = Path(__file__).parent
-CACHE_DIR = ROOT / ".cache"
 FIXTURE_PATH = ROOT / "fixtures" / "sample_run.json"
+
+
+def _default_cache_dir() -> Path:
+    # Serverless filesystems are read-only apart from /tmp, and that /tmp is per-instance,
+    # so the cache degrades to a best-effort warm-instance optimisation there.
+    if os.environ.get("VERCEL"):
+        return Path("/tmp/csn-cache")
+    return ROOT / ".cache"
+
+
+CACHE_DIR = Path(os.environ.get("CACHE_DIR") or _default_cache_dir())
 
 MODEL = "claude-sonnet-5"
 
@@ -136,8 +146,11 @@ async def call(
         return hit
 
     cache_file = CACHE_DIR / f"{key}.json"
-    if cache_file.exists():
-        return json.loads(cache_file.read_text())
+    try:
+        if cache_file.exists():
+            return json.loads(cache_file.read_text())
+    except OSError:
+        pass
 
     nudge = (
         "\n\nIMPORTANT: pass the tool input as a real JSON object. Array fields must be "
@@ -174,8 +187,11 @@ async def call(
             continue
 
         # Only cache once the shape is known good, so a bad response can't poison the run.
-        CACHE_DIR.mkdir(exist_ok=True)
-        cache_file.write_text(json.dumps(result, indent=2))
+        try:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(json.dumps(result, indent=2))
+        except OSError:
+            pass  # read-only filesystem: caching is an optimisation, not a requirement
         return result
 
     raise RuntimeError(f"{name}: {last_error}")

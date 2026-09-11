@@ -60,6 +60,19 @@ function overflowToggle(hiddenNodes, label) {
   return btn;
 }
 
+// Native <details> so the browser supplies keyboard handling, disclosure semantics
+// and open/close state. Collapsed by default to keep the panes scannable.
+function disclosure(title, body, trailing) {
+  const wrap = el('details', 'blurb');
+  const summary = document.createElement('summary');
+  summary.appendChild(el('span', 'chev', '▸'));
+  summary.appendChild(el('h3', null, title));
+  if (trailing) summary.appendChild(trailing);
+  wrap.appendChild(summary);
+  if (body) wrap.appendChild(el('p', 'blurb-body', body));
+  return wrap;
+}
+
 function ideaCard(idea, cls) {
   const wrap = el('div', cls || 'idea');
   wrap.appendChild(el('div', 'hl', idea.headline));
@@ -76,11 +89,13 @@ function renderThemes() {
   state.themes.forEach((theme) => {
     const card = el('div', 'theme');
 
-    const top = el('div', 'theme-top');
-    top.appendChild(el('h3', null, theme.name));
-    top.appendChild(el('span', 'count', `${theme.idea_ids.length} concepts`));
-    card.appendChild(top);
-    card.appendChild(el('p', 'desc', theme.description));
+    card.appendChild(
+      disclosure(
+        theme.name,
+        theme.description,
+        el('span', 'count', `${theme.idea_ids.length} concepts`)
+      )
+    );
 
     const themeIdeas = theme.idea_ids.map((id) => state.ideasById[id]).filter(Boolean);
     const nodes = themeIdeas.map((idea, i) => {
@@ -146,8 +161,7 @@ function renderMaps() {
 
   state.maps.forEach((m) => {
     const card = el('div', 'map');
-    card.appendChild(el('h3', null, m.title));
-    card.appendChild(el('p', 'rationale', m.rationale));
+    card.appendChild(disclosure(m.title, m.rationale));
 
     const plot = el('div', 'plot');
     plot.appendChild(el('div', 'axis-label ax-yhigh', `▲ ${m.y_axis.high_label}`));

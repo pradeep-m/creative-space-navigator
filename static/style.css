@@ -159,9 +159,47 @@ main {
   background: var(--panel-2);
 }
 
-.theme-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-.theme h3 { font-size: 14.5px; }
-.theme .desc { margin: 6px 0 11px; color: var(--muted); font-size: 13px; }
+/* Collapsible title + explanation, shared by theme cards and maps. */
+
+.blurb { margin-bottom: 12px; }
+
+.blurb > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  padding: 1px 0;
+}
+
+.blurb > summary::-webkit-details-marker { display: none; }
+
+.blurb > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.blurb > summary h3 { font-size: 14.5px; flex: 1; }
+.blurb > summary:hover h3 { color: var(--accent); }
+
+.chev {
+  flex: none;
+  display: inline-block;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform .15s ease;
+}
+
+.blurb[open] > summary .chev { transform: rotate(90deg); }
+.blurb > summary:hover .chev { color: var(--accent); }
+
+.blurb-body {
+  margin: 8px 0 0 17px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
 
 .count {
   flex: none;
@@ -222,8 +260,6 @@ main {
   background: var(--panel-2);
 }
 
-.map h3 { font-size: 14.5px; }
-.map .rationale { margin: 5px 0 14px; color: var(--muted); font-size: 12.5px; }
 
 .plot {
   display: grid;

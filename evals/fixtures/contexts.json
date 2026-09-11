@@ -1,0 +1,62 @@
+[
+  {
+    "id": "b2b_ops",
+    "product": "A cross-team organizational update and operating-record product that keeps a searchable history of what every team decided, shipped and changed",
+    "target_audience": "Chiefs of Staff and BizOps leaders at companies of 200-2000 people",
+    "additional_context": null
+  },
+  {
+    "id": "budgeting",
+    "product": "A consumer budgeting app that categorises spending automatically and nudges users toward savings goals",
+    "target_audience": "Young professionals in their twenties building financial habits for the first time",
+    "additional_context": null
+  },
+  {
+    "id": "running",
+    "product": "A premium running shoe with a carbon plate and a high-rebound foam midsole",
+    "target_audience": "Recreational runners training for their first half marathon",
+    "additional_context": null
+  },
+  {
+    "id": "security",
+    "product": "An enterprise cybersecurity platform consolidating threat detection, response and compliance reporting into one console",
+    "target_audience": "CISOs at regulated enterprises",
+    "additional_context": null
+  },
+  {
+    "id": "tutoring",
+    "product": "An online tutoring platform matching students with vetted subject tutors for live weekly sessions",
+    "target_audience": "Parents of school-age children who are worried about falling grades",
+    "additional_context": null
+  },
+  {
+    "id": "hotel",
+    "product": "A luxury island resort with private villas, a spa and a reef-diving programme",
+    "target_audience": "Affluent leisure travellers booking a once-a-year trip",
+    "additional_context": null
+  },
+  {
+    "id": "meal_delivery",
+    "product": "A meal-delivery service shipping chef-designed dinners that reheat in under ten minutes",
+    "target_audience": "Busy families with two working parents and young children",
+    "additional_context": null
+  },
+  {
+    "id": "observability",
+    "product": "A developer observability platform unifying logs, metrics and distributed traces with per-service cost attribution",
+    "target_audience": "Platform and infrastructure engineers who own production reliability",
+    "additional_context": null
+  },
+  {
+    "id": "dating",
+    "product": "A dating app that limits users to a small number of curated matches per week to encourage real conversations",
+    "target_audience": "Single working professionals in their late twenties and thirties",
+    "additional_context": null
+  },
+  {
+    "id": "nonprofit",
+    "product": "A charitable fundraising campaign funding clean-water infrastructure in rural communities",
+    "target_audience": "Prospective individual donors who give occasionally but have no regular giving habit",
+    "additional_context": null
+  }
+]

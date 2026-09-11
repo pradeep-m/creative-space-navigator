@@ -8,7 +8,11 @@ import json
 
 from llm import CACHE_DIR, FIXTURE_PATH
 
-bundle = {path.stem: json.loads(path.read_text()) for path in sorted(CACHE_DIR.glob("*.json"))}
+bundle = {
+    path.stem: json.loads(path.read_text())
+    for path in sorted(CACHE_DIR.glob("*.json"))
+    if not path.name.endswith(".meta.json")  # provenance sidecars, not replayable responses
+}
 
 FIXTURE_PATH.parent.mkdir(exist_ok=True)
 FIXTURE_PATH.write_text(json.dumps(bundle, indent=2))

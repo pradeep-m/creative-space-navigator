@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import llm
 
 CORPUS_SIZE = 24
+
+# Every stage dispatches through this instead of calling llm.call directly, so the eval
+# harness can swap in a runner that records provenance or overrides the model, without
+# any prompt text being duplicated outside this module.
+Runner = Callable[..., Awaitable[dict[str, Any]]]
 
 IDEA_SCHEMA = {
     "type": "object",
@@ -56,7 +62,9 @@ def _format_map(m: dict[str, Any]) -> str:
     )
 
 
-async def propose_dimensions(product: str, audience: str) -> dict[str, Any]:
+async def propose_dimensions(
+    product: str, audience: str, *, runner: Runner | None = None
+) -> dict[str, Any]:
     system = (
         "You are a creative strategist who structures the space of possible advertising "
         "concepts. You think in terms of underlying tensions that generate real variation, "
@@ -86,7 +94,7 @@ Hard requirements:
 For each map give a short title, the two axes with concise pole labels, and one sentence on
 why this tension matters for this particular brief."""
 
-    return await llm.call(
+    return await (runner or llm.call)(
         name="dimensions",
         system=system,
         user=user,
@@ -115,8 +123,14 @@ why this tension matters for this particular brief."""
 
 
 async def generate_corpus(
-    product: str, audience: str, maps: list[dict[str, Any]]
+    product: str,
+    audience: str,
+    maps: list[dict[str, Any]],
+    count: int | None = None,
+    *,
+    runner: Runner | None = None,
 ) -> dict[str, Any]:
+    n = CORPUS_SIZE if count is None else count
     quadrant_lines = []
     for m in maps:
         x, y = m["x_axis"], m["y_axis"]
@@ -129,7 +143,9 @@ async def generate_corpus(
         "You are a senior copywriter generating a deliberately wide range of ad concepts. "
         "Your job is coverage of the possibility space, not polish on a single idea."
     )
-    user = f"""{_brief(product, audience)}
+    # Default count keeps the production prompt byte-identical so existing cache keys still hit.
+    if n == CORPUS_SIZE:
+        user = f"""{_brief(product, audience)}
 
 Generate exactly {CORPUS_SIZE} distinct ad concepts.
 
@@ -150,8 +166,31 @@ Rules:
 - The maps above are scaffolding for your own coverage. Never mention the axes, poles or
   quadrant names in the headline, body or angle. A reader of the output should not be able
   to tell that these maps exist."""
+    else:
+        per_quadrant = max(1, n // (4 * max(len(maps), 1)))
+        user = f"""{_brief(product, audience)}
 
-    return await llm.call(
+Generate exactly {n} distinct ad concepts.
+
+These concepts will be plotted onto the following 2x2 maps, so the set must spread across
+the whole space. Every quadrant listed below needs at least {per_quadrant} concepts that clearly
+belong in it:
+
+{chr(10).join(quadrant_lines)}
+
+Rules:
+- Maximise genuine diversity. If two concepts could be swapped without a reader noticing,
+  one of them is wasted.
+- Vary the strategic angle, not just the wording. Different promises, different objections
+  handled, different moments of use, different emotional registers.
+- Some concepts should be deliberately extreme on one axis. Do not hedge everything to the
+  middle, or the maps will be useless.
+- Keep every concept plausible enough to actually run.
+- The maps above are scaffolding for your own coverage. Never mention the axes, poles or
+  quadrant names in the headline, body or angle. A reader of the output should not be able
+  to tell that these maps exist."""
+
+    return await (runner or llm.call)(
         name="corpus",
         system=system,
         user=user,
@@ -166,7 +205,11 @@ Rules:
 
 
 async def cluster_themes(
-    product: str, audience: str, ideas: list[dict[str, Any]]
+    product: str,
+    audience: str,
+    ideas: list[dict[str, Any]],
+    *,
+    runner: Runner | None = None,
 ) -> dict[str, Any]:
     """Deliberately not told about the axes, so this stays an honest naive baseline."""
     system = (
@@ -187,7 +230,7 @@ Rules:
 - Name each theme the way a strategist would present it to a client: evocative but concrete.
 - The description should say what the theme claims and who it is for, in one sentence."""
 
-    return await llm.call(
+    return await (runner or llm.call)(
         name="themes",
         system=system,
         user=user,
@@ -215,7 +258,12 @@ Rules:
 
 
 async def place_on_map(
-    product: str, audience: str, ideas: list[dict[str, Any]], m: dict[str, Any]
+    product: str,
+    audience: str,
+    ideas: list[dict[str, Any]],
+    m: dict[str, Any],
+    *,
+    runner: Runner | None = None,
 ) -> dict[str, Any]:
     system = (
         "You are an analyst placing creative concepts onto a semantic map. You are precise "
@@ -238,7 +286,7 @@ Rules:
   y score along with it.
 - Return one entry for every concept id listed above, using those exact ids."""
 
-    return await llm.call(
+    return await (runner or llm.call)(
         name="placement",
         system=system,
         user=user,
@@ -271,6 +319,8 @@ async def refine_theme(
     theme: dict[str, Any],
     examples: list[dict[str, Any]],
     count: int = 6,
+    *,
+    runner: Runner | None = None,
 ) -> dict[str, Any]:
     system = (
         "You are a senior copywriter developing one chosen creative direction in more depth."
@@ -290,7 +340,7 @@ Rules:
 - Do not restate the concepts above. Find angles the existing set has missed.
 - Vary the execution: some short and blunt, some warmer, some with a specific concrete detail."""
 
-    return await llm.call(
+    return await (runner or llm.call)(
         name="refine_theme",
         system=system,
         user=user,
@@ -304,11 +354,49 @@ Rules:
     )
 
 
+def build_intersection_constraints(
+    maps: list[dict[str, Any]],
+    selections: list[dict[str, Any]],
+    include_rationale: bool = False,
+) -> tuple[list[str], list[str]]:
+    """Turn selected quadrants into the binding constraint lines and a display label.
+
+    Lives here rather than in the route so the eval harness conditions generation through
+    exactly the same text the app does. include_rationale is off in production: the app
+    passes only axis names and pole labels, which is what the eval measures by default.
+
+    Raises KeyError if a selection names a map that was not supplied.
+    """
+    maps_by_id = {m["id"]: m for m in maps}
+    constraints: list[str] = []
+    label_parts: list[str] = []
+
+    for sel in selections:
+        m = maps_by_id[sel["map_id"]]
+        for axis, side in (
+            (m["x_axis"], sel["x_side"]),
+            (m["y_axis"], sel["y_side"]),
+        ):
+            chosen = axis["high_label"] if side == "high" else axis["low_label"]
+            other = axis["low_label"] if side == "high" else axis["high_label"]
+            constraints.append(
+                f"On the '{axis['name']}' tension, the concept must be clearly "
+                f"{chosen}, not {other}."
+            )
+            label_parts.append(chosen)
+        if include_rationale and m.get("rationale"):
+            constraints.append(f"Context for the '{m['title']}' tensions: {m['rationale']}")
+
+    return constraints, label_parts
+
+
 async def refine_intersection(
     product: str,
     audience: str,
     constraints: list[str],
     count: int = 6,
+    *,
+    runner: Runner | None = None,
 ) -> dict[str, Any]:
     system = (
         "You are a senior copywriter working inside a tightly specified creative brief. "
@@ -328,7 +416,7 @@ Rules:
   you resolved it. Do not quietly water both down into something generic. If they sit together
   comfortably, leave `tension_note` empty."""
 
-    return await llm.call(
+    return await (runner or llm.call)(
         name="refine_intersection",
         system=system,
         user=user,

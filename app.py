@@ -247,21 +247,13 @@ async def refine_theme(body: RefineThemeIn):
 
 @app.post("/api/refine/intersection")
 async def refine_intersection(body: IntersectionIn):
-    maps_by_id = {m.id: m for m in body.maps}
-    constraints, label_parts = [], []
-
-    for sel in body.selections:
-        m = maps_by_id.get(sel.map_id)
-        if m is None:
-            raise HTTPException(404, f"Unknown map_id {sel.map_id}.")
-        for axis, side in ((m.x_axis, sel.x_side), (m.y_axis, sel.y_side)):
-            chosen = axis.high_label if side == "high" else axis.low_label
-            other = axis.low_label if side == "high" else axis.high_label
-            constraints.append(
-                f"On the '{axis.name}' tension, the concept must be clearly "
-                f"{chosen}, not {other}."
-            )
-            label_parts.append(chosen)
+    try:
+        constraints, label_parts = prompts.build_intersection_constraints(
+            [m.model_dump() for m in body.maps],
+            [s.model_dump() for s in body.selections],
+        )
+    except KeyError as exc:
+        raise HTTPException(404, f"Unknown map_id {exc.args[0]}.") from exc
 
     result = await guard(
         prompts.refine_intersection(body.product, body.audience, constraints)

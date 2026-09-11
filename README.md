@@ -47,6 +47,10 @@ To record a new fixture, do a live run of the brief you want, then:
 uv run python record_fixtures.py
 ```
 
+## Live demo
+
+https://creative-space-navigator.vercel.app - password protected; any username works.
+
 ## Deploying
 
 The app is stateless: the browser holds the run and posts the relevant slices back with
@@ -64,8 +68,13 @@ Set two environment variables on the deployment:
 | `APP_PASSWORD` | shared password for basic auth; the gate is skipped entirely when unset |
 
 `vercel.json` routes every path to `api/index.py` and allows 60s per invocation, which
-covers the ~26s corpus call. On Vercel the disk cache moves to `/tmp` and is best-effort
-only, since each instance gets its own, so expect cold runs to cost full latency.
+covers the ~30s corpus call. On Vercel the disk cache moves to `/tmp` and is best-effort
+only, since each instance gets its own, so expect cold runs to cost full latency (~65s
+for a complete exploration).
+
+Note the routing detail: the catch-all discards the original path, so it is forwarded as
+a `__vpath` query parameter and restored in `api/index.py`. This uses the legacy `routes`
+key rather than `rewrites`, because `$1` is only interpolated under `routes`.
 
 ## How it works
 

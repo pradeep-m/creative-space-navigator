@@ -1,0 +1,242 @@
+{
+  "item_001": {
+    "judgment_id": "j-7ab4344d0d",
+    "concept_id": "steering-navigator-running-4721d0ba-c2",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 2,
+    "stratum": "steering"
+  },
+  "item_002": {
+    "judgment_id": "j-44eb437cb3",
+    "concept_id": "steering-navigator-budgeting-b18c8d9e-c1",
+    "map_id": "m1",
+    "axis": "x",
+    "judge_score": 4,
+    "stratum": "steering"
+  },
+  "item_003": {
+    "judgment_id": "j-4ab7e501da",
+    "concept_id": "isolation-navigator-b2b_ops-36ffab94-c2",
+    "map_id": "m2",
+    "axis": "x",
+    "judge_score": 1,
+    "stratum": "isolation"
+  },
+  "item_004": {
+    "judgment_id": "j-96aafccb46",
+    "concept_id": "steering-navigator_grounded-hotel-4365b258-c1",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 2,
+    "stratum": "steering"
+  },
+  "item_005": {
+    "judgment_id": "j-a010f384bd",
+    "concept_id": "isolation-navigator-observability-ebe0f24a-c1",
+    "map_id": "m2",
+    "axis": "y",
+    "judge_score": 5,
+    "stratum": "isolation"
+  },
+  "item_006": {
+    "judgment_id": "j-a23733441e",
+    "concept_id": "steering-navigator_grounded-budgeting-6b2fa726-c2",
+    "map_id": "m1",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_007": {
+    "judgment_id": "j-713330eb18",
+    "concept_id": "steering-navigator-observability-e9e0349e-c1",
+    "map_id": "m2",
+    "axis": "y",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_008": {
+    "judgment_id": "j-d1366d920a",
+    "concept_id": "isolation-navigator-budgeting-f0569263-c0",
+    "map_id": "m1",
+    "axis": "y",
+    "judge_score": 5,
+    "stratum": "isolation"
+  },
+  "item_009": {
+    "judgment_id": "j-ae5f6a2d07",
+    "concept_id": "isolation-navigator-meal_delivery-f9c0a334-c1",
+    "map_id": "m2",
+    "axis": "y",
+    "judge_score": 1,
+    "stratum": "isolation"
+  },
+  "item_010": {
+    "judgment_id": "j-588104ca28",
+    "concept_id": "placement_fidelity-corpus-observability-c20",
+    "map_id": "m0",
+    "axis": "y",
+    "judge_score": 5,
+    "stratum": "baseline"
+  },
+  "item_011": {
+    "judgment_id": "j-c343d3f7ab",
+    "concept_id": "steering-naive-b2b_ops-08dfb892-c0",
+    "map_id": "m2",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "baseline"
+  },
+  "item_012": {
+    "judgment_id": "j-ab18dbd874",
+    "concept_id": "steering-navigator-meal_delivery-135fc9de-c0",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_013": {
+    "judgment_id": "j-1b3b6471c3",
+    "concept_id": "isolation-navigator-nonprofit-c79394d6-c1",
+    "map_id": "m1",
+    "axis": "y",
+    "judge_score": 1,
+    "stratum": "isolation"
+  },
+  "item_014": {
+    "judgment_id": "j-b46f6bba52",
+    "concept_id": "composition-navigator-meal_delivery-bf82dba6-c1",
+    "map_id": "m1",
+    "axis": "x",
+    "judge_score": 2,
+    "stratum": "composition"
+  },
+  "item_015": {
+    "judgment_id": "j-bfdc8560e4",
+    "concept_id": "steering-navigator_grounded-budgeting-82844195-c1",
+    "map_id": "m0",
+    "axis": "y",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_016": {
+    "judgment_id": "j-dbff011ca2",
+    "concept_id": "composition-navigator-budgeting-ad46bd9b-c0",
+    "map_id": "m2",
+    "axis": "x",
+    "judge_score": 1,
+    "stratum": "composition"
+  },
+  "item_017": {
+    "judgment_id": "j-4fcfff30da",
+    "concept_id": "composition-naive-budgeting-cb1a28bf-c0",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 4,
+    "stratum": "baseline"
+  },
+  "item_018": {
+    "judgment_id": "j-18c996e5e4",
+    "concept_id": "isolation-navigator-dating-1f3a46b0-c2",
+    "map_id": "m1",
+    "axis": "x",
+    "judge_score": 2,
+    "stratum": "isolation"
+  },
+  "item_019": {
+    "judgment_id": "j-cef454f368",
+    "concept_id": "isolation-navigator-hotel-fbd821aa-c0",
+    "map_id": "m1",
+    "axis": "x",
+    "judge_score": 1,
+    "stratum": "isolation"
+  },
+  "item_020": {
+    "judgment_id": "j-13fd5ac7a1",
+    "concept_id": "composition-navigator-meal_delivery-bf82dba6-c0",
+    "map_id": "m2",
+    "axis": "x",
+    "judge_score": 4,
+    "stratum": "composition"
+  },
+  "item_021": {
+    "judgment_id": "j-9e16a6ff6c",
+    "concept_id": "steering-navigator-dating-38fa7da8-c0",
+    "map_id": "m2",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_022": {
+    "judgment_id": "j-8f6ac73a51",
+    "concept_id": "steering-navigator-security-c377412e-c2",
+    "map_id": "m1",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_023": {
+    "judgment_id": "j-f63f1eff40",
+    "concept_id": "steering-navigator-security-28cb1363-c2",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "steering"
+  },
+  "item_024": {
+    "judgment_id": "j-b539b3343d",
+    "concept_id": "steering-naive-b2b_ops-c602e516-c0",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "baseline"
+  },
+  "item_025": {
+    "judgment_id": "j-b2b56c90c7",
+    "concept_id": "isolation-navigator-observability-1b4f2a60-c1",
+    "map_id": "m2",
+    "axis": "y",
+    "judge_score": 5,
+    "stratum": "isolation"
+  },
+  "item_026": {
+    "judgment_id": "j-79fdc0bea2",
+    "concept_id": "composition-navigator-meal_delivery-12d41b45-c0",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "composition"
+  },
+  "item_027": {
+    "judgment_id": "j-fda526ac31",
+    "concept_id": "composition-navigator-budgeting-79bc8d33-c2",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 5,
+    "stratum": "composition"
+  },
+  "item_028": {
+    "judgment_id": "j-3d603fb6ac",
+    "concept_id": "isolation-navigator-dating-b00ae9be-c0",
+    "map_id": "m1",
+    "axis": "y",
+    "judge_score": 1,
+    "stratum": "isolation"
+  },
+  "item_029": {
+    "judgment_id": "j-32d872871b",
+    "concept_id": "isolation-navigator-security-0745d7ff-c1",
+    "map_id": "m2",
+    "axis": "y",
+    "judge_score": 1,
+    "stratum": "isolation"
+  },
+  "item_030": {
+    "judgment_id": "j-e8838a6ee7",
+    "concept_id": "composition-naive-security-e340452e-c1",
+    "map_id": "m0",
+    "axis": "x",
+    "judge_score": 1,
+    "stratum": "baseline"
+  }
+}

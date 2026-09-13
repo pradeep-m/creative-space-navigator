@@ -1,0 +1,41 @@
+{
+  "run_id": "full-20260912T011614Z",
+  "eval_version": "1",
+  "git_commit": "2fb0197dd80708f296a3216fef193487ff5a944b",
+  "production_prompt_hash": "4582bbb1d9429580",
+  "generator_model": "claude-sonnet-5",
+  "generator_temperature": "not sent: deprecated for this model family",
+  "judge_model": "claude-fable-5-1",
+  "judge_temperature": "not sent: deprecated for this model family",
+  "judge_prompt_version": "judge-v1",
+  "random_seed": 20260911,
+  "profile": {
+    "name": "full",
+    "contexts": 10,
+    "maps_per_context": 3,
+    "quadrants_per_map": 2,
+    "steering_reps": 3,
+    "isolation_reps": 2,
+    "composition_reps": 3,
+    "concepts_per_generation": 3,
+    "coverage_budget": 12,
+    "ablation_concepts": 180,
+    "grounded_arm_reps": 1,
+    "placement_maps_per_context": 1,
+    "calibration_sample": 30
+  },
+  "suites": [
+    "axis_quality",
+    "steering",
+    "isolation",
+    "composition",
+    "coverage",
+    "placement_fidelity",
+    "judge_ablation",
+    "human_calibration"
+  ],
+  "estimated_calls": {
+    "generation_calls": 680,
+    "judge_calls": 5750
+  }
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -261,14 +262,24 @@ async def call_with_meta(
         extra["tool_choice"] = {"type": "tool", "name": tool_name}
 
     last_error = ""
+    # httpx read timeout resets whenever any byte arrives, so a trickle of thinking
+    # tokens can hold a slot forever. This wall-clock cap cannot be reset that way.
+    wall_clock = float(os.environ.get("ANTHROPIC_CALL_TIMEOUT", "120"))
     for attempt in range(2):
-        response = await client().messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user + (nudge if attempt else "")}],
-            **extra,
-        )
+        try:
+            response = await asyncio.wait_for(
+                client().messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=system,
+                    messages=[{"role": "user", "content": user + (nudge if attempt else "")}],
+                    **extra,
+                ),
+                timeout=wall_clock,
+            )
+        except asyncio.TimeoutError:
+            last_error = f"request exceeded {wall_clock:.0f}s wall-clock timeout"
+            continue
 
         result, last_error = _extract(response, output_format)
         if result is None:

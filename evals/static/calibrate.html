@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Human calibration</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --line: #2a2f3a;
+    --text: #e6e8ee;
+    --muted: #969db0;
+    --faint: #6b7285;
+    --accent: #7aa2f7;
+    --accent-dim: #2b3550;
+    --low: #7dc4a0;
+    --high: #e0af68;
+    --good: #9ece6a;
+    --danger: #f7768e;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  button { font: inherit; cursor: pointer; }
+  h1, h2, h3 { margin: 0; font-weight: 600; }
+
+  .app {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100dvh;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(15, 17, 21, .94);
+  }
+  .brand { min-width: 0; }
+  .brand h1 { font-size: 16px; letter-spacing: -.01em; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  .progress {
+    flex: 1;
+    max-width: 360px;
+  }
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .bar {
+    height: 4px;
+    background: var(--panel-2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .bar > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--accent);
+    border-radius: inherit;
+    transition: width .2s ease;
+  }
+  .run-id {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  aside {
+    border-right: 1px solid var(--line);
+    padding: 12px 10px 24px;
+    overflow: auto;
+    background: #12141a;
+  }
+  aside h2 {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 6px 8px 10px;
+  }
+  .nav-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 8px;
+    align-items: center;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 7px 8px;
+  }
+  .nav-item:hover { background: var(--panel); color: var(--text); }
+  .nav-item.current { background: var(--accent-dim); color: var(--text); }
+  .nav-item .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    justify-self: center;
+  }
+  .nav-item.scored .dot { background: var(--good); border-color: var(--good); }
+  .nav-item .label {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  main {
+    overflow: auto;
+    padding: 28px 36px 28px;
+  }
+  .stage { max-width: 760px; margin: 0 auto; }
+
+  .brief {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 8px 14px;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 22px;
+  }
+  .brief dt {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding-top: 2px;
+  }
+  .brief dd { margin: 0; color: var(--text); }
+
+  .axis-head { margin: 0 0 8px; }
+  .axis-head h2 { font-size: 22px; letter-spacing: -.02em; }
+  .poles {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .poles .low { color: var(--low); }
+  .poles .high { color: var(--high); text-align: right; }
+  .definition {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 28px;
+    padding: 12px 14px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    border-left: 3px solid var(--line);
+  }
+  .definition strong {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .concept-kicker {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .concept {
+    background: #1a1d26;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .concept h3 {
+    font-size: 20px;
+    letter-spacing: -.02em;
+    line-height: 1.3;
+    margin-bottom: 10px;
+  }
+  .concept p {
+    margin: 0;
+    color: #c8cdd8;
+    white-space: pre-wrap;
+  }
+
+  .rules {
+    font-size: 13px;
+    color: var(--faint);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 4px;
+  }
+  .rules li::before { content: "· "; color: var(--muted); }
+
+  .empty, .error {
+    max-width: 560px;
+    margin: 80px auto;
+    color: var(--muted);
+    text-align: center;
+  }
+  .error { color: var(--danger); }
+
+  footer.scorebar {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    background: rgba(15, 17, 21, .96);
+    padding: 14px 22px 16px;
+  }
+  .scorebar-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    align-items: center;
+  }
+  .nav-btns { display: flex; gap: 8px; }
+  .ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .ghost:hover { color: var(--text); border-color: var(--muted); }
+  .ghost:disabled { opacity: .35; cursor: default; }
+
+  .scale { text-align: center; min-width: 0; }
+  .scale-poles {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 12px;
+    margin-bottom: 6px;
+    padding: 0 4px;
+  }
+  .scale-poles .low { color: var(--low); }
+  .scale-poles .high { color: var(--high); }
+  .scale-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pick {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 0;
+  }
+  .pick b { font-size: 18px; font-weight: 650; line-height: 1; }
+  .pick span {
+    font-size: 10px;
+    color: var(--faint);
+    line-height: 1;
+  }
+  .pick:hover { border-color: var(--accent); }
+  .pick[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: #fff;
+  }
+  .pick[aria-pressed="true"] span { color: #c5d4f6; }
+  .pick.pole-low[aria-pressed="true"] { border-color: var(--low); background: #173026; }
+  .pick.pole-low[aria-pressed="true"] span { color: var(--low); }
+  .pick.pole-high[aria-pressed="true"] { border-color: var(--high); background: #2c2414; }
+  .pick.pole-high[aria-pressed="true"] span { color: var(--high); }
+  .scale-caption {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .save-status {
+    font-size: 12px;
+    color: var(--faint);
+    min-width: 140px;
+    text-align: right;
+  }
+  .save-status.ok { color: var(--good); }
+  .save-status.err { color: var(--danger); }
+
+  .done {
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #173026;
+    color: var(--good);
+    font-size: 13px;
+  }
+  .done code {
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--text);
+  }
+
+  @media (max-width: 820px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+    }
+    header { padding: 10px 14px; gap: 10px; }
+    .brand p, .run-id, .scale-caption, .save-status, #next-blank { display: none; }
+    aside {
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 8px 10px;
+      overflow: auto hidden;
+    }
+    aside h2 { display: none; }
+    #nav { display: flex; gap: 4px; }
+    .nav-item { width: auto; grid-template-columns: 10px auto; }
+    .nav-item .label { max-width: 72px; }
+    main { padding: 16px 14px 18px; }
+    footer.scorebar { padding: 10px 12px 12px; }
+    .scorebar-inner {
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+    }
+    .pick { width: 44px; height: 44px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Human calibration</h1>
+      <p>Locate the concept on this axis. Neither pole is better.</p>
+    </div>
+    <div class="progress">
+      <div class="progress-meta">
+        <span id="progress-label">0 / 0 scored</span>
+        <span id="item-pos"></span>
+      </div>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
+    <div class="run-id" id="run-id"></div>
+  </header>
+
+  <aside>
+    <h2>Items</h2>
+    <nav id="nav"></nav>
+  </aside>
+
+  <main>
+    <div id="stage" class="stage"></div>
+  </main>
+
+  <footer class="scorebar">
+    <div class="scorebar-inner">
+      <div class="nav-btns">
+        <button class="ghost" id="prev" type="button">← Prev</button>
+        <button class="ghost" id="next" type="button">Next →</button>
+        <button class="ghost" id="next-blank" type="button">Next blank</button>
+      </div>
+      <div class="scale" id="scale"></div>
+      <div class="save-status" id="status">Saved as you go</div>
+    </div>
+  </footer>
+</div>
+
+<script>
+const SCALE_HINTS = [
+  [1, "strongly", "low"],
+  [2, "somewhat", "low"],
+  [3, "balanced", "mid"],
+  [4, "somewhat", "high"],
+  [5, "strongly", "high"],
+];
+
+const state = { items: [], index: 0, runId: "", scoresPath: "" };
+let saveTimer = null;
+
+function $(id) { return document.getElementById(id); }
+
+function splitConcept(text) {
+  const i = text.indexOf("\n");
+  if (i === -1 || i > 90) return { headline: "", body: text };
+  return { headline: text.slice(0, i).trim(), body: text.slice(i + 1).trim() };
+}
+
+function pole(item, which) {
+  return which === "low" ? item.score_1_means : item.score_5_means;
+}
+
+function scoreOf(item) {
+  const raw = (item.your_score_1_to_5 || "").trim();
+  return raw ? Number(raw) : null;
+}
+
+function renderNav() {
+  $("nav").innerHTML = state.items.map((item, i) => {
+    const scored = scoreOf(item) !== null;
+    const current = i === state.index ? " current" : "";
+    return `<button type="button" class="nav-item${scored ? " scored" : ""}${current}" data-i="${i}">
+      <i class="dot"></i>
+      <span class="label">${item.item_id.replace("item_", "")} · ${esc(item.dimension)}</span>
+    </button>`;
+  }).join("");
+}
+
+function renderStage() {
+  const item = state.items[state.index];
+  const scored = state.items.filter(x => scoreOf(x) !== null).length;
+  const done = scored === state.items.length && scored > 0;
+  $("progress-label").textContent = `${scored} / ${state.items.length} scored`;
+  $("item-pos").textContent = `${state.index + 1} of ${state.items.length}`;
+  $("bar").style.width = state.items.length ? `${(scored / state.items.length) * 100}%` : "0";
+  $("run-id").textContent = state.runId;
+  $("prev").disabled = state.index === 0;
+  $("next").disabled = state.index === state.items.length - 1;
+
+  if (!item) {
+    $("stage").innerHTML = `<p class="empty">No items in this export.</p>`;
+    return;
+  }
+
+  const { headline, body } = splitConcept(item.concept);
+  const doneBanner = done ? `<div class="done">All ${scored} items scored and saved to
+    <code>${esc(state.scoresPath)}</code>. Re-run
+    <code>python -m evals.run --suite human_calibration --run-id ${esc(state.runId)}</code>
+    when you are ready. Do not open the key until then.</div>` : "";
+
+  $("stage").innerHTML = `
+    ${doneBanner}
+    <dl class="brief">
+      <dt>Product</dt><dd>${esc(item.product)}</dd>
+      <dt>Audience</dt><dd>${esc(item.target_audience)}</dd>
+    </dl>
+    <div class="axis-head"><h2>${esc(item.dimension)}</h2></div>
+    <div class="poles">
+      <span class="low">1 = strongly ${esc(item.score_1_means)}</span>
+      <span class="high">5 = strongly ${esc(item.score_5_means)}</span>
+    </div>
+    <div class="concept-kicker">Concept to place</div>
+    <article class="concept">
+      ${headline ? `<h3>${esc(headline)}</h3>` : ""}
+      <p>${esc(body || item.concept)}</p>
+    </article>
+    <div class="definition">
+      <strong>How this dimension was defined for this brief</strong>
+      ${esc(item.dimension_definition)}
+    </div>
+    <ul class="rules">
+      <li>You are locating the concept, not rating ad quality.</li>
+      <li>3 is correct when it is genuinely mixed or this dimension is not in play.</li>
+      <li>Score only <em>${esc(item.dimension)}</em>. Ignore everything else.</li>
+    </ul>`;
+
+  const hints = { 1: "strongly", 2: "somewhat", 3: "balanced", 4: "somewhat", 5: "strongly" };
+  $("scale").innerHTML = `
+    <div class="scale-poles">
+      <span class="low">1 · ${esc(item.score_1_means)}</span>
+      <span class="high">5 · ${esc(item.score_5_means)}</span>
+    </div>
+    <div class="scale-row">
+      ${SCALE_HINTS.map(([n, , side]) => {
+        const label = n === 3 ? "balanced" : `${hints[n]} ${pole(item, side)}`;
+        const klass = n <= 2 ? "pole-low" : n >= 4 ? "pole-high" : "";
+        const pressed = scoreOf(item) === n ? "true" : "false";
+        return `<button type="button" class="pick ${klass}" data-score="${n}" aria-pressed="${pressed}" aria-label="${esc(label)}">
+          <b>${n}</b><span>${esc(hints[n])}</span>
+        </button>`;
+      }).join("")}
+    </div>
+    <p class="scale-caption">Keys: 1–5 score · ← → move · N next blank · Backspace clear</p>`;
+}
+
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function show(index) {
+  state.index = Math.max(0, Math.min(index, state.items.length - 1));
+  renderNav();
+  renderStage();
+}
+
+function nextUnscored(from) {
+  const n = state.items.length;
+  for (let step = 1; step <= n; step++) {
+    const i = (from + step) % n;
+    if (scoreOf(state.items[i]) === null) return i;
+  }
+  return from;
+}
+
+async function setScore(score, { advance = true } = {}) {
+  const item = state.items[state.index];
+  if (!item) return;
+  const wasBlank = scoreOf(item) === null;
+  $("status").className = "save-status";
+  $("status").textContent = "Saving…";
+  try {
+    const res = await fetch("/api/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item_id: item.item_id, score }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    apply(data);
+    $("status").className = "save-status ok";
+    $("status").textContent = "Saved";
+    if (advance && wasBlank && score !== null) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => show(nextUnscored(state.index)), 280);
+    } else {
+      renderNav();
+      renderStage();
+    }
+  } catch (err) {
+    $("status").className = "save-status err";
+    $("status").textContent = "Save failed";
+    console.error(err);
+  }
+}
+
+function apply(data) {
+  const currentId = state.items[state.index]?.item_id;
+  state.items = data.items;
+  state.runId = data.run_id;
+  state.scoresPath = data.scores_path;
+  if (currentId) {
+    const i = state.items.findIndex(item => item.item_id === currentId);
+    if (i >= 0) state.index = i;
+  }
+}
+
+async function boot() {
+  try {
+    const res = await fetch("/api/state");
+    if (!res.ok) throw new Error(await res.text());
+    apply(await res.json());
+    const start = state.items.findIndex(item => scoreOf(item) === null);
+    show(start === -1 ? 0 : start);
+  } catch (err) {
+    $("stage").innerHTML = `<p class="error">Could not load the calibration export. ${esc(err.message)}</p>`;
+  }
+}
+
+$("nav").addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-i]");
+  if (btn) show(Number(btn.dataset.i));
+});
+$("scale").addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-score]");
+  if (btn) setScore(Number(btn.dataset.score));
+});
+$("prev").addEventListener("click", () => show(state.index - 1));
+$("next").addEventListener("click", () => show(state.index + 1));
+$("next-blank").addEventListener("click", () => show(nextUnscored(state.index)));
+
+document.addEventListener("keydown", (event) => {
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  const tag = event.target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (event.key >= "1" && event.key <= "5") {
+    event.preventDefault();
+    setScore(Number(event.key));
+  } else if (event.key === "ArrowRight" || event.key === "j") {
+    event.preventDefault();
+    show(state.index + 1);
+  } else if (event.key === "ArrowLeft" || event.key === "k") {
+    event.preventDefault();
+    show(state.index - 1);
+  } else if (event.key === "n" || event.key === "N") {
+    event.preventDefault();
+    show(nextUnscored(state.index));
+  } else if (event.key === "Backspace" || event.key === "Delete") {
+    event.preventDefault();
+    setScore(null, { advance: false });
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

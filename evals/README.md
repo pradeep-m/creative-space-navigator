@@ -124,14 +124,21 @@ suites costs one call.
 
 `--suite human_calibration` writes `calibration_export.csv`: 30 stratified rows carrying the
 concept, the axis definition and a blank score column, with the condition, the arm, the
-target quadrant and the automated score all withheld. Score every row 1-5 using the same
-rubric, save it as `calibration_scores.csv` in the same directory, then re-run:
+target quadrant and the automated score all withheld. Score in the browser:
+
+```bash
+python -m evals.calibrate --run-id <run_id>
+```
+
+The tool shows one item at a time with the same fields the judge sees, and writes
+`calibration_scores.csv` as you go. Then re-run:
 
 ```bash
 python -m evals.run --suite human_calibration --run-id <run_id>
 ```
 
-Do not open `calibration_key.json` until you are finished; it holds the judge's scores.
+You can still fill the CSV by hand if you prefer. Do not open `calibration_key.json` until
+you are finished; it holds the judge's scores.
 
 Per the PRD, do not retune the judge prompt after looking at the human scores unless the
 whole benchmark is rerun under a new `EVAL_VERSION`.

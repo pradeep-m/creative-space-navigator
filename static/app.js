@@ -9,6 +9,7 @@ const state = {
   maps: [],
   placements: {},   // map_id -> [{idea_id, x, y}]
   selections: {},   // map_id -> {x_side, y_side}
+  batches: [],      // generated intersection rounds, newest last
 };
 
 const brief = () => ({ product: state.product, audience: state.audience });
@@ -257,14 +258,37 @@ function refreshSelectionStyles() {
   });
 }
 
-function selectionLabel() {
-  const parts = [];
-  state.maps.forEach((m) => {
-    const sel = state.selections[m.id];
-    if (!sel) return;
-    parts.push(labelFor(m.x_axis, sel.x_side), labelFor(m.y_axis, sel.y_side));
+function snapshotSelections() {
+  return Object.fromEntries(
+    Object.entries(state.selections).map(([id, sides]) => [id, { ...sides }])
+  );
+}
+
+function selectionKey(selections) {
+  return state.maps
+    .map((m) => {
+      const sel = selections[m.id];
+      return sel ? `${m.id}:${sel.x_side}:${sel.y_side}` : '';
+    })
+    .filter(Boolean)
+    .join('|');
+}
+
+function selectedQuadrants(selections) {
+  return state.maps.flatMap((m) => {
+    const sel = selections[m.id];
+    if (!sel) return [];
+    return [{
+      mapTitle: m.title,
+      quadrant: `${labelFor(m.x_axis, sel.x_side)} · ${labelFor(m.y_axis, sel.y_side)}`,
+    }];
   });
-  return parts.join(' × ');
+}
+
+function selectionLabel(selections = state.selections) {
+  return selectedQuadrants(selections)
+    .map((q) => q.quadrant)
+    .join(' × ');
 }
 
 function renderSelbar() {
@@ -274,43 +298,111 @@ function renderSelbar() {
 
   $('sel-label').textContent = selectionLabel();
   const btn = $('gen-intersection');
+  if (btn.disabled) return;
+
+  const key = selectionKey(state.selections);
+  const already = state.batches.some((b) => b.key === key && !b.pending && b.ideas.length);
+  const verb = already ? 'Generate more here' : 'Generate concepts here';
   btn.textContent =
-    count < state.maps.length
-      ? `Generate concepts here (${count}/${state.maps.length} maps)`
-      : 'Generate concepts here';
+    count < state.maps.length ? `${verb} (${count}/${state.maps.length} maps)` : verb;
+}
+
+function renderIntersection() {
+  const panel = $('intersection');
+  if (state.batches.length === 0) {
+    panel.hidden = true;
+    panel.replaceChildren();
+    return;
+  }
+
+  panel.hidden = false;
+  panel.replaceChildren();
+  panel.appendChild(el('h3', null, 'Generated concepts'));
+
+  state.batches.forEach((batch, i) => {
+    const block = el('div', 'gen-batch');
+    if (batch.pending) block.classList.add('pending');
+
+    const head = el('div', 'gen-batch-head');
+    head.appendChild(el('div', 'gen-batch-title', `Round ${i + 1}`));
+    const chips = el('div', 'quad-chips');
+    batch.quadrants.forEach((q) => {
+      const chip = el('span', 'quad-chip');
+      chip.appendChild(el('span', 'quad-chip-map', q.mapTitle));
+      chip.appendChild(el('span', 'quad-chip-name', q.quadrant));
+      chips.appendChild(chip);
+    });
+    head.appendChild(chips);
+    block.appendChild(head);
+
+    if (batch.pending) {
+      const wait = el('p', 'empty');
+      wait.appendChild(el('span', 'spinner'));
+      wait.appendChild(document.createTextNode('Generating concepts for this selection…'));
+      block.appendChild(wait);
+    } else if (batch.error) {
+      block.appendChild(el('p', 'empty', batch.error));
+    } else {
+      if (batch.tension_note) block.appendChild(el('div', 'tension', batch.tension_note));
+      batch.ideas.forEach((idea) => block.appendChild(ideaCard(idea)));
+    }
+    panel.appendChild(block);
+  });
+
+  const more = el('button', 'more-btn', 'Generate more with the selected quadrants');
+  more.type = 'button';
+  more.disabled = $('gen-intersection').disabled || Object.keys(state.selections).length === 0;
+  more.onclick = generateIntersection;
+  panel.appendChild(more);
 }
 
 async function generateIntersection() {
   const btn = $('gen-intersection');
-  const panel = $('intersection');
-  const selections = Object.entries(state.selections).map(([map_id, sides]) => ({
-    map_id,
-    ...sides,
-  }));
+  if (btn.disabled || Object.keys(state.selections).length === 0) return;
+
+  const selections = snapshotSelections();
+  const payload = Object.entries(selections).map(([map_id, sides]) => ({ map_id, ...sides }));
+  const key = selectionKey(selections);
+  const prior_headlines = state.batches
+    .filter((b) => b.key === key && !b.pending)
+    .flatMap((b) => b.ideas.map((idea) => idea.headline).filter(Boolean));
+
+  const batch = {
+    key,
+    selections,
+    quadrants: selectedQuadrants(selections),
+    pending: true,
+    ideas: [],
+    tension_note: '',
+    error: null,
+  };
+  state.batches.push(batch);
 
   btn.disabled = true;
-  const original = btn.textContent;
   btn.textContent = 'Generating…';
-  panel.hidden = false;
-  panel.replaceChildren(el('p', 'empty', 'Generating concepts for this intersection…'));
+  renderIntersection();
+  $('intersection').querySelector('.gen-batch.pending')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   try {
     const data = await api('/api/refine/intersection', {
       ...brief(),
       maps: state.maps,
-      selections,
+      selections: payload,
+      prior_headlines,
     });
-    panel.replaceChildren();
-    panel.appendChild(el('h3', null, 'Concepts at this intersection'));
-    panel.appendChild(el('p', 'combo', data.label));
-    if (data.tension_note) panel.appendChild(el('div', 'tension', data.tension_note));
-    data.ideas.forEach((idea) => panel.appendChild(ideaCard(idea)));
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    batch.pending = false;
+    batch.ideas = data.ideas || [];
+    batch.tension_note = data.tension_note || '';
   } catch (err) {
-    panel.replaceChildren(el('p', 'empty', err.message));
+    batch.pending = false;
+    batch.error = err.message;
   } finally {
     btn.disabled = false;
-    btn.textContent = original;
+    renderSelbar();
+    renderIntersection();
+    const batches = $('intersection').querySelectorAll('.gen-batch');
+    batches[batches.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
@@ -321,7 +413,7 @@ async function explore(product, audience) {
   go.disabled = true;
   Object.assign(state, {
     product, audience, ideas: [], ideasById: {}, themes: [], maps: [],
-    placements: {}, selections: {},
+    placements: {}, selections: {}, batches: [],
   });
   themesEl.replaceChildren(el('p', 'empty', 'Waiting for concepts…'));
   mapsEl.replaceChildren(el('p', 'empty', 'Proposing creative dimensions…'));

@@ -1,7 +1,7 @@
 {
   "run_id": "full-20260912T011614Z",
   "eval_version": "1",
-  "git_commit": "2fb0197dd80708f296a3216fef193487ff5a944b",
+  "git_commit": "e2f704245acf6616d4c74d2c25b98c3459071254",
   "production_prompt_hash": "4582bbb1d9429580",
   "generator_model": "claude-sonnet-5",
   "generator_temperature": "not sent: deprecated for this model family",
@@ -25,17 +25,10 @@
     "calibration_sample": 30
   },
   "suites": [
-    "axis_quality",
-    "steering",
-    "isolation",
-    "composition",
-    "coverage",
-    "placement_fidelity",
-    "judge_ablation",
     "human_calibration"
   ],
   "estimated_calls": {
-    "generation_calls": 680,
-    "judge_calls": 5750
+    "generation_calls": 10,
+    "judge_calls": 10
   }
 }

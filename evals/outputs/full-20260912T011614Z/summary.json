@@ -2,7 +2,7 @@
   "run": {
     "run_id": "full-20260912T011614Z",
     "eval_version": "1",
-    "git_commit": "2fb0197dd80708f296a3216fef193487ff5a944b",
+    "git_commit": "e2f704245acf6616d4c74d2c25b98c3459071254",
     "production_prompt_hash": "4582bbb1d9429580",
     "generator_model": "claude-sonnet-5",
     "generator_temperature": "not sent: deprecated for this model family",
@@ -26,66 +26,38 @@
       "calibration_sample": 30
     },
     "suites": [
-      "axis_quality",
-      "steering",
-      "isolation",
-      "composition",
-      "coverage",
-      "placement_fidelity",
-      "judge_ablation",
       "human_calibration"
     ]
   },
   "axis_quality": {
-    "high_quality_rate": 0.26666666666666666,
-    "high_quality_ci": [
-      0.13333333333333333,
-      0.43333333333333335
-    ],
-    "mean_non_redundancy": 3.3666666666666667,
-    "meets_target": false
+    "high_quality_rate": null,
+    "high_quality_ci": null,
+    "mean_non_redundancy": null,
+    "meets_target": null
   },
   "steering": {
-    "x_adherence": 0.8759259259259259,
-    "y_adherence": 0.975925925925926,
-    "per_axis_adherence": 0.9259259259259259,
-    "joint_adherence": 0.8518518518518519,
-    "joint_adherence_ci": [
-      0.7833333333333333,
-      0.9166666666666666
-    ],
-    "ambiguous_rate": 0.024074074074074074
+    "x_adherence": null,
+    "y_adherence": null,
+    "per_axis_adherence": null,
+    "joint_adherence": null,
+    "joint_adherence_ci": null,
+    "ambiguous_rate": null
   },
   "naive_baseline": {
-    "joint_adherence": 0.7611111111111111,
-    "joint_adherence_ci": [
-      0.6814814814814815,
-      0.825925925925926
-    ],
-    "difference": 0.09074074074074079,
-    "difference_ci": [
-      0.029629629629629672,
-      0.15000000000000002
-    ]
+    "joint_adherence": null,
+    "joint_adherence_ci": null,
+    "difference": null,
+    "difference_ci": null
   },
-  "grounded_conditioning": {
-    "note": "Production builds constraints from axis names and pole labels only; this arm adds the map rationale the app currently drops.",
-    "matched_navigator_joint_adherence": 0.8444444444444444,
-    "grounded_joint_adherence": 0.85,
-    "difference": 0.005555555555555536,
-    "difference_ci": [
-      -0.02777777777777779,
-      0.03333333333333344
-    ]
-  },
+  "grounded_conditioning": {},
   "isolation": {
-    "target_movement": 3.483333333333333,
-    "non_target_movement": 0.37500000000000006,
-    "pct_meeting_both": 0.8,
-    "median_isolation_ratio": 12.666666666666668
+    "target_movement": null,
+    "non_target_movement": null,
+    "pct_meeting_both": null,
+    "median_isolation_ratio": null
   },
   "composition": {
-    "one_map": 0.8518518518518519,
+    "one_map": null,
     "two_maps": null,
     "three_maps": null,
     "two_maps_naive": null,
@@ -93,60 +65,27 @@
     "degradation_curve": []
   },
   "coverage": {
-    "flat_coverage": 0.7,
-    "structured_corpus_coverage": 0.9,
-    "structured_quadrant_coverage": 0.925,
-    "flat_balance": 0.6003157684632997,
-    "structured_corpus_balance": 0.8592386914571456
+    "flat_coverage": null,
+    "structured_corpus_coverage": null,
+    "structured_quadrant_coverage": null,
+    "flat_balance": null,
+    "structured_corpus_balance": null
   },
-  "placement_fidelity": {
-    "n_concept_placements": 120,
-    "spearman_x": 0.7837388897254701,
-    "spearman_y": 0.7826121071010683,
-    "sign_agreement_x": 0.8529411764705882,
-    "sign_agreement_y": 0.8686868686868687,
-    "quadrant_agreement": 0.7674418604651163,
-    "quadrant_agreement_ci": [
-      0.6781609195402298,
-      0.8536585365853658
-    ],
-    "judge_ambiguity_rate": 0.2833333333333333,
-    "note": "Scales differ (production is continuous -1..+1, the judge is 1-5), so this reports rank correlation and side agreement rather than point differences."
+  "placement_fidelity": {},
+  "judge_ablation": {},
+  "human_calibration": {
+    "n": 30,
+    "mean_absolute_error": 0.4666666666666667,
+    "exact_agreement": 0.7333333333333333,
+    "within_one_agreement": 0.8666666666666667,
+    "spearman_rho": 0.8114343765855518,
+    "meets_targets": true
   },
-  "judge_ablation": {
-    "n_concepts": 180,
-    "n_paired_scores": 360,
-    "grounded_joint_adherence": 0.8388888888888889,
-    "blind_joint_adherence": 0.8555555555555555,
-    "adherence_difference": -0.016666666666666607,
-    "score_agreement": {
-      "n": 360,
-      "mean_absolute_error": 0.15555555555555556,
-      "exact_agreement": 0.8583333333333333,
-      "within_one_agreement": 0.9861111111111112,
-      "spearman_rho": 0.9560129928562444,
-      "meets_targets": true
-    },
-    "grounded_ambiguous_rate": 0.019444444444444445,
-    "blind_ambiguous_rate": 0.016666666666666666,
-    "self_consistency": {
-      "n": 60,
-      "mean_absolute_error": 0.08333333333333333,
-      "exact_agreement": 0.9166666666666666,
-      "within_one_agreement": 1.0,
-      "spearman_rho": 0.9838285610892555,
-      "meets_targets": true,
-      "note": "Two independent passes of the same judge on the same question. Differences smaller than this are within judge noise."
-    },
-    "note": "Grounded judging supplies the map rationale as the axis definition; blind judging supplies only the axis name and pole labels. All headline metrics elsewhere in this benchmark use grounded judging."
-  },
-  "human_calibration": {},
   "interpretation": {
-    "A_controls_meaningful": "Generated maps fall short of the predeclared quality bar.",
-    "B_controls_steer": "Selecting a quadrant reliably moves generation into it.",
-    "C_genuine_dimensions": "Single-axis interventions move the target axis while largely preserving the other: the 2x2 behaves as a control surface, not a label.",
-    "D_beats_ordinary_prompting": "The semantic controls work, but Claude follows equivalent plain-language instructions about as well. Any product advantage lies in representation, discovery and interaction rather than a superior control mechanism.",
-    "E_composition_works": null,
-    "_naive_comparison_reported": true
+    "A_controls_meaningful": null,
+    "B_controls_steer": null,
+    "C_genuine_dimensions": null,
+    "D_beats_ordinary_prompting": null,
+    "E_composition_works": null
   }
 }

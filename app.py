@@ -122,6 +122,7 @@ class Selection(BaseModel):
 class IntersectionIn(Brief):
     maps: list[Map] = Field(max_length=6)
     selections: list[Selection] = Field(min_length=1, max_length=6)
+    prior_headlines: list[str] = Field(default_factory=list, max_length=MAX_IDEAS)
 
 
 # ---------------------------------------------------------------- helpers
@@ -255,8 +256,13 @@ async def refine_intersection(body: IntersectionIn):
     except KeyError as exc:
         raise HTTPException(404, f"Unknown map_id {exc.args[0]}.") from exc
 
+    # MOCK replay is keyed on the exact prompt, so skip priors there and reuse the
+    # recorded fixture. Live runs pass them so a second generate is actually new.
+    priors = [] if llm.mock_enabled() else [h for h in body.prior_headlines if h.strip()]
     result = await guard(
-        prompts.refine_intersection(body.product, body.audience, constraints)
+        prompts.refine_intersection(
+            body.product, body.audience, constraints, prior_headlines=priors
+        )
     )
     return {
         "ideas": result["ideas"],

@@ -131,10 +131,12 @@ async def run(rc: RunContext) -> SuiteResult:
         "export_path": str(rc.store.dir / EXPORT_FILE),
         "strata": {s: sum(1 for v in key.values() if v["stratum"] == s) for s in STRATA},
         "instructions": (
-            f"Score every row in {EXPORT_FILE} from 1 to 5 using the same rubric as the "
-            f"judge, save it as {SCORES_FILE} in the same directory, then re-run "
+            f"Score every row from 1 to 5 using the same rubric as the judge: "
+            f"`python -m evals.calibrate --run-id {rc.run_id}`. "
+            f"That writes {SCORES_FILE}. Then re-run "
             f"`python -m evals.run --suite human_calibration --run-id {rc.run_id}`. "
-            f"Do not open {KEY_FILE} until you are finished."
+            f"You can also fill {EXPORT_FILE} by hand. Do not open {KEY_FILE} until you "
+            f"are finished."
         ),
     }
 

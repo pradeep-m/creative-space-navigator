@@ -396,6 +396,7 @@ async def refine_intersection(
     constraints: list[str],
     count: int = 6,
     *,
+    prior_headlines: list[str] | None = None,
     runner: Runner | None = None,
 ) -> dict[str, Any]:
     system = (
@@ -403,6 +404,14 @@ async def refine_intersection(
         "You treat the constraints as binding."
     )
     bullets = "\n".join(f"- {c}" for c in constraints)
+    extra_rules = ""
+    if prior_headlines:
+        listed = "\n".join(f"- {h}" for h in prior_headlines)
+        extra_rules = (
+            f"\n\nConcepts already written for this intersection — do not repeat them:\n"
+            f"{listed}\n\n"
+            f"- Do not restate the concepts above. Find angles the existing set has missed."
+        )
     user = f"""{_brief(product, audience)}
 
 Write {count} new ad concepts that satisfy ALL of the following constraints at once:
@@ -414,7 +423,7 @@ Rules:
 - Within those constraints, make the {count} concepts as different from each other as possible.
 - If two of the constraints are in genuine tension, say so in `tension_note` and explain how
   you resolved it. Do not quietly water both down into something generic. If they sit together
-  comfortably, leave `tension_note` empty."""
+  comfortably, leave `tension_note` empty.{extra_rules}"""
 
     return await (runner or llm.call)(
         name="refine_intersection",

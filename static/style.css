@@ -87,7 +87,7 @@ h1 { font-size: 19px; letter-spacing: -.01em; }
   font-weight: 600;
 }
 
-#go:disabled { opacity: .5; cursor: default; }
+#go:disabled, #gen-intersection:disabled { opacity: .5; cursor: default; }
 
 button.ghost {
   background: transparent;
@@ -377,8 +377,60 @@ main {
   padding: 15px 16px;
 }
 
-.results h3 { font-size: 14px; }
+.results h3 { font-size: 14px; margin-bottom: 4px; }
 .results .combo { color: var(--accent); font-size: 12.5px; margin: 5px 0 12px; }
+.results > .more-btn { margin-top: 14px; }
+
+.gen-batch {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.gen-batch:first-of-type {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: none;
+}
+
+.gen-batch-head { margin-bottom: 11px; }
+
+.gen-batch-title {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.quad-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quad-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  padding: 5px 9px;
+}
+
+.quad-chip-map {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+
+.quad-chip-name {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
 
 .tension {
   border-left: 2px solid var(--warn);
